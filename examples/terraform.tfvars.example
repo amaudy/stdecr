@@ -1,0 +1,72 @@
+# Example Terraform Variables Configuration for ECR Repositories
+# Copy this file to terraform.tfvars and modify the values for your environment
+
+# AWS Configuration
+aws_region = "us-west-2"
+
+# Repository Names (customize for your project)
+frontend_repo_name   = "my-app-frontend"
+backend_repo_name    = "my-app-backend"
+migrations_repo_name = "my-app-migrations"
+worker_repo_name     = "my-app-worker"
+shared_repo_name     = "my-app-shared"
+
+# Security Configuration
+image_tag_mutability = "MUTABLE"    # Use "IMMUTABLE" for production
+encryption_type      = "AES256"     # Use "KMS" for enhanced security
+# kms_key_id         = "arn:aws:kms:us-west-2:123456789012:key/12345678-1234-1234-1234-123456789012"
+
+# Lifecycle Policy Configuration
+max_image_count     = 15    # Keep last 15 images
+untagged_image_days = 7     # Delete untagged images after 7 days
+
+# Optional Features
+create_shared_repo = true   # Set to false if you don't need a shared repository
+
+# Custom repository policy for shared repo (optional)
+# shared_repo_policy = jsonencode({
+#   Version = "2012-10-17"
+#   Statement = [
+#     {
+#       Sid    = "CrossAccountAccess"
+#       Effect = "Allow"
+#       Principal = {
+#         AWS = "arn:aws:iam::123456789012:root"
+#       }
+#       Action = [
+#         "ecr:GetDownloadUrlForLayer",
+#         "ecr:BatchGetImage",
+#         "ecr:BatchCheckLayerAvailability"
+#       ]
+#     }
+#   ]
+# })
+
+# Tags
+tags = {
+  Environment = "development"
+  Project     = "my-application"
+  Team        = "platform"
+  Owner       = "devops@company.com"
+  ManagedBy   = "terraform"
+}
+
+# Alternative configurations for different environments:
+
+# Production Configuration
+# image_tag_mutability = "IMMUTABLE"
+# encryption_type      = "KMS"
+# max_image_count      = 25
+# untagged_image_days  = 3
+
+# Development Configuration
+# image_tag_mutability = "MUTABLE"
+# encryption_type      = "AES256"
+# max_image_count      = 10
+# untagged_image_days  = 14
+
+# Staging Configuration
+# image_tag_mutability = "MUTABLE"
+# encryption_type      = "AES256"
+# max_image_count      = 15
+# untagged_image_days  = 7 
