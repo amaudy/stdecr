@@ -59,4 +59,35 @@ output "docker_tag_command" {
 output "docker_push_command" {
   description = "Example Docker push command"
   value       = "docker push ${aws_ecr_repository.main.repository_url}:latest"
+}
+
+# VPC Endpoints Outputs
+output "vpc_endpoints_created" {
+  description = "Whether VPC endpoints were created"
+  value       = var.create_vpc_endpoints
+}
+
+output "ecr_api_endpoint_id" {
+  description = "ID of the ECR API VPC endpoint"
+  value       = var.create_vpc_endpoints ? aws_vpc_endpoint.ecr_api[0].id : null
+}
+
+output "ecr_dkr_endpoint_id" {
+  description = "ID of the ECR Docker VPC endpoint"
+  value       = var.create_vpc_endpoints ? aws_vpc_endpoint.ecr_dkr[0].id : null
+}
+
+output "s3_endpoint_id" {
+  description = "ID of the S3 VPC endpoint"
+  value       = var.create_vpc_endpoints ? aws_vpc_endpoint.s3[0].id : null
+}
+
+output "logs_endpoint_id" {
+  description = "ID of the CloudWatch Logs VPC endpoint"
+  value       = var.create_vpc_endpoints && var.create_logs_endpoint ? aws_vpc_endpoint.logs[0].id : null
+}
+
+output "vpc_endpoints_security_group_id" {
+  description = "ID of the VPC endpoints security group"
+  value       = var.create_vpc_endpoints ? aws_security_group.vpc_endpoints[0].id : null
 } 

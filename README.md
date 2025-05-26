@@ -10,6 +10,8 @@ This Terraform module creates an Amazon ECR (Elastic Container Registry) reposit
 - **Encryption**: AES256 or KMS encryption support
 - **Repository Policies**: Optional custom access policies
 - **Docker Commands**: Helpful output commands for Docker operations
+- **VPC Endpoints**: Private ECR access for ECS tasks without public IPs
+- **CloudWatch Logs Endpoint**: Private logging for ECS tasks
 
 ## Required Inputs
 
@@ -78,6 +80,33 @@ module "secure_app_ecr" {
     Environment = "production"
     Application = "secure-app"
     Compliance  = "required"
+  }
+}
+```
+
+### ECR Repository with VPC Endpoints (Private Access)
+
+```hcl
+# ECR repository with VPC endpoints for private access
+# This enables ECS tasks without public IPs to access ECR
+module "private_ecr" {
+  source = "./stdecr"
+
+  # Required inputs
+  name   = "private-application"
+  region = "us-west-2"
+
+  # VPC Endpoints for private ECR access
+  create_vpc_endpoints = true
+  vpc_id              = "vpc-12345678"
+  vpc_cidr_block      = "10.0.0.0/16"
+  private_subnet_ids  = ["subnet-abcdef12", "subnet-21fedcba"]
+  route_table_ids     = ["rtb-12345678", "rtb-87654321"]
+  create_logs_endpoint = true  # Enable CloudWatch Logs endpoint
+
+  tags = {
+    Environment = "production"
+    Purpose     = "private-access"
   }
 }
 ```
@@ -194,6 +223,12 @@ module "migrations_ecr" {
 | `max_image_count` | Maximum number of images to keep | `number` | `10` |
 | `untagged_image_days` | Days to keep untagged images | `number` | `7` |
 | `lifecycle_tag_prefixes` | Tag prefixes for lifecycle policy | `list(string)` | `["v", "release", "latest"]` |
+| `create_vpc_endpoints` | Create VPC endpoints for private ECR access | `bool` | `false` |
+| `vpc_id` | VPC ID for VPC endpoints | `string` | `""` |
+| `vpc_cidr_block` | VPC CIDR block for security groups | `string` | `""` |
+| `private_subnet_ids` | Private subnet IDs for VPC endpoints | `list(string)` | `[]` |
+| `route_table_ids` | Route table IDs for S3 gateway endpoint | `list(string)` | `[]` |
+| `create_logs_endpoint` | Create CloudWatch Logs VPC endpoint | `bool` | `true` |
 | `tags` | Tags to assign to the repository | `map(string)` | `{}` |
 
 ## Outputs
@@ -215,6 +250,12 @@ module "migrations_ecr" {
 | `docker_build_command` | Example Docker build command |
 | `docker_tag_command` | Example Docker tag command |
 | `docker_push_command` | Example Docker push command |
+| `vpc_endpoints_created` | Whether VPC endpoints were created |
+| `ecr_api_endpoint_id` | ID of the ECR API VPC endpoint |
+| `ecr_dkr_endpoint_id` | ID of the ECR Docker VPC endpoint |
+| `s3_endpoint_id` | ID of the S3 VPC endpoint |
+| `logs_endpoint_id` | ID of the CloudWatch Logs VPC endpoint |
+| `vpc_endpoints_security_group_id` | ID of the VPC endpoints security group |
 
 ## Docker Workflow
 
@@ -235,6 +276,60 @@ docker tag my-application:latest 123456789012.dkr.ecr.us-west-2.amazonaws.com/my
 
 # 5. Push the image to ECR
 docker push 123456789012.dkr.ecr.us-west-2.amazonaws.com/my-application:latest
+```
+
+## Private ECR Access with VPC Endpoints
+
+When deploying ECS tasks without public IP addresses (for enhanced security), you need VPC endpoints to access ECR privately. This module can create the necessary VPC endpoints:
+
+### Required VPC Endpoints for Private ECR Access:
+1. **ECR API Endpoint**: For ECR API calls (authentication, metadata)
+2. **ECR Docker Endpoint**: For Docker registry operations (pull/push)
+3. **S3 Gateway Endpoint**: For ECR layer storage (ECR uses S3 internally)
+4. **CloudWatch Logs Endpoint**: For ECS logging (optional but recommended)
+
+### Example: Private ECR Setup
+
+```hcl
+# Create ECR repository with VPC endpoints
+module "private_ecr" {
+  source = "./stdecr"
+
+  name   = "my-private-app"
+  region = "us-west-2"
+
+  # Enable VPC endpoints for private access
+  create_vpc_endpoints = true
+  vpc_id              = var.vpc_id
+  vpc_cidr_block      = var.vpc_cidr_block
+  private_subnet_ids  = var.private_subnet_ids
+  route_table_ids     = var.route_table_ids
+  create_logs_endpoint = true
+
+  tags = {
+    Environment = "production"
+    Security    = "private-only"
+  }
+}
+
+# Deploy ECS service without public IPs
+module "private_service" {
+  source = "./stdecsservice"
+
+  docker_image   = "${module.private_ecr.repository_url}:latest"
+  container_port = 8000
+
+  # Disable public IPs (requires VPC endpoints)
+  assign_public_ip = false
+  internal_alb     = true
+
+  service_name    = "my-private-app"
+  cluster_id      = var.ecs_cluster_id
+  vpc_id          = var.vpc_id
+  private_subnets = var.private_subnets
+
+  depends_on = [module.private_ecr]
+}
 ```
 
 ## Integration with ECS Service Module

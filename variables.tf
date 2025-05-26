@@ -78,4 +78,41 @@ variable "tags" {
   description = "A map of tags to assign to the ECR repository"
   type        = map(string)
   default     = {}
+}
+
+# VPC Endpoints Configuration (for private ECR access)
+variable "create_vpc_endpoints" {
+  description = "Whether to create VPC endpoints for private ECR access"
+  type        = bool
+  default     = false
+}
+
+variable "vpc_id" {
+  description = "VPC ID where VPC endpoints will be created (required if create_vpc_endpoints is true)"
+  type        = string
+  default     = ""
+}
+
+variable "vpc_cidr_block" {
+  description = "CIDR block of the VPC (required if create_vpc_endpoints is true)"
+  type        = string
+  default     = ""
+}
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs for VPC endpoints (required if create_vpc_endpoints is true)"
+  type        = list(string)
+  default     = []
+}
+
+variable "route_table_ids" {
+  description = "List of route table IDs for S3 gateway endpoint (required if create_vpc_endpoints is true)"
+  type        = list(string)
+  default     = []
+}
+
+variable "create_logs_endpoint" {
+  description = "Whether to create CloudWatch Logs VPC endpoint (useful for ECS logging)"
+  type        = bool
+  default     = true
 } 
